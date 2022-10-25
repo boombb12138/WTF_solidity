@@ -1,4 +1,4 @@
-# learn_sodility
+# learn_solidity
 sodility代码：
 https://remix.ethereum.org/#version=soljson-v0.8.7+commit.e28d00a7.js&optimize=false&runs=200&gist=
 
