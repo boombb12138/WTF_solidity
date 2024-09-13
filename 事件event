@@ -1,0 +1,113 @@
+# 事件event
+
+`Solidity`中的事件（`event`）是`EVM`上日志的抽象，它具有两个特点：
+
+1. 应用程序（[`ethers.js`](https://learnblockchain.cn/docs/ethers.js/api-contract.html#id18)）可以通过`RPC`接口订阅和监听这些事件，
+2. 事件是`EVM`上比较经济的存储数据的方式
+
+## EVM
+
+Ethereum Virtual Machine，以太坊虚拟机，负责执行智能合约。EVM的主要作用是为去中心化应用提供一个执行环境，使得这些应用能够安全、透明地运行在以太坊区块链上。
+
+特点：
+1.  所有合约都是以字节码形式存储在区块链上。EVM将这些字节码转换为计算机可以执行的操作。
+
+1. 账户模型
+    - 在以太坊中，每个账户都记录了该账户的余额、nonce（防止重放攻击的随机数）、存储的合约数据和智能合约代码。
+        
+        [nonce（防止重放攻击的随机数）](https://www.notion.so/nonce-00acb1c2e67a4972abeee8f4341a9fc7?pvs=21)
+        
+    - 账户模型类似于传统的银行系统，账户持有余额，并且可以直接相互转账。以太坊的账户分为两种：**外部账户（EOA）** 和 **合约账户**。EOA是由用户控制的账户，而合约账户是由智能合约控制的账户。
+    - 当智能合约执行时，EVM会根据执行结果更新合约账户的状态，并相应调整余额、存储数据等。
+2. GAS机制
+    
+    GAS是用来衡量执行某项操作所需的计算资源。Gas机制是为了避免网络滥用，同时激励矿工，因为他们在验证和执行交易的时候能够得到Gas，Gas高的交易会被有限处理
+    
+
+### **声明事件**
+
+事件的声明由`event`关键字开头，接着是事件名称，括号里面写好事件需要记录的变量类型和变量名。
+
+```jsx
+event Transfer(address indexed from, address indexed to, uint256 value);
+```
+
+`from`和`to`前面带有`indexed`关键字，他们会保存在以太坊虚拟机日志的`topics`中，方便之后检索。`indexed`标记的参数可以理解为检索事件的索引“键”。
+
+事件中不带 `indexed`的参数会被存储在 `data` 部分中，可以理解为事件的“值”。`data` 部分的变量不能被直接检索，但可以存储任意大小的数据。因此一般 `data` 部分可以用来存储复杂的数据结构，例如数组和字符串等
+
+### **释放事件**
+
+通过emit
+
+```jsx
+// 定义_transfer函数，执行转账逻辑
+function _transfer(
+    address from,
+    address to,
+    uint256 amount
+) external {
+
+    _balances[from] = 10000000; // 给转账地址一些初始代币
+
+    _balances[from] -=  amount; // from地址减去转账数量
+    _balances[to] += amount; // to地址加上转账数量
+
+    // 释放事件
+    emit Transfer(from, to, amount);
+}
+```
+
+### **EVM日志 `Log`**
+
+以太坊虚拟机（EVM）用日志`Log`来存储`Solidity`事件，每条日志记录都包含主题`topics`和数据`data`两部分。
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/a6ca9822-e902-41f9-90d9-747f9ae75db0/e22bbcb6-c605-4ed5-8525-96d5fdb85c3c/image.png)
+
+## **Topics**
+
+用于描述事件，长度不能超过`4`。它的第一个元素是事件的签名（哈希）。除了事件哈希，主题还可以包含至多`3`个`indexed`参数
+
+### 事件的签名
+
+事件的签名（Event Signature）是指智能合约中事件的名称以及其参数类型组成的一个字符串,以便在以太坊区块链的事件日志中能够唯一标识并识别该事件。
+
+eg:
+
+对于一个标准的 ERC-20 代币 `Transfer` 事件：
+
+```solidity
+
+event Transfer(address indexed from, address indexed to, uint256 value);
+标记了indexed的参数就会出现在topics里面
+```
+
+事件签名为：
+
+```css
+
+Transfer(address,address,uint256)
+```
+
+### 事件的哈希计算
+
+使用 `keccak256` 哈希函数对这个事件签名进行哈希运算，生成一个 256 位的哈希值。这就是事件日志中的 `topic[0]`，用于标识这个事件。
+
+例子中的哈希值为：
+
+```css
+keccak256("Transfer(address,address,uint256)")
+```
+
+生成的哈希值为：
+
+```
+
+0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+```
+
+这个哈希值就是在以太坊事件日志中用于识别 `Transfer` 事件的标识符，也称为事件的哈希。
+
+## data
+
+可以存储任意大小的数据。因此一般 `data` 部分可以用来存储复杂的数据结构，例如数组和字符串
